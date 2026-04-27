@@ -1,6 +1,7 @@
 ﻿using AutoMarcas.API.Models;
 using AutoMarcas.API.Repositories.Interfaces;
 using AutoMarcas.API.Services.Interfaces;
+using DalProLib;
 
 namespace AutoMarcas.API.Services
 {
@@ -16,6 +17,13 @@ namespace AutoMarcas.API.Services
         public List<Modelo> GetAll()
         {
             return _repo.GetAll();
+        }
+
+     
+
+        public int Create(string modelDetails)
+        {
+            return _repo.Create(modelDetails);
         }
     }
 }

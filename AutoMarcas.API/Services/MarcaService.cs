@@ -17,5 +17,10 @@ namespace AutoMarcas.API.Services
         {
             return _repo.GetAll();
         }
+        public int Create(string marcaDetails)
+        {
+            return _repo.Create(marcaDetails);
+        }
+
     }
 }

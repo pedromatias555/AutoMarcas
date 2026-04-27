@@ -81,4 +81,16 @@ app.MapDelete("/veiculos/{id}", (int id, IVeiculoService service) =>
     return Results.Ok();
 });
 
+app.MapPost("/marcas", (string marcaDetails, IMarcaService service) =>
+{
+    int id = service.Create(marcaDetails);
+    return Results.Created($"/marcas/{id}", new { marcaId = id, marcaDetails });
+});
+
+app.MapPost("/modelos", (string modelDetails, IModeloService service) =>
+{
+    int id = service.Create(modelDetails);
+    return Results.Created($"/modelos/{id}", new { modeloId = id, modelDetails });
+});
+
 app.Run();

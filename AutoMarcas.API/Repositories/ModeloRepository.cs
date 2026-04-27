@@ -11,6 +11,13 @@ namespace AutoMarcas.API.Repositories
             string sql = "SELECT * FROM Modelo";
             return DalPro.Query<Modelo>(sql);
         }
+
+        public int Create(string modelDetails)
+        {
+            string sql = "INSERT INTO Modelo (ModelDetails) OUTPUT INSERTED.ModeloId VALUES (@ModelDetails)";
+            var parametros = new Dictionary<string, object> { { "ModelDetails", modelDetails } };
+            return DalPro.Query<int>(sql, parametros).First();
+        }
     }
 }
 

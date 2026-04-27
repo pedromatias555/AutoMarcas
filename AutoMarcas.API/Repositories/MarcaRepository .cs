@@ -11,5 +11,11 @@ namespace AutoMarcas.API.Repositories
             string sql = "SELECT * FROM Marca";
             return DalPro.Query<Marca>(sql);
         }
+        public int Create(string marcaDetails)
+        {
+            string sql = "INSERT INTO Marca (MarcaDetails) OUTPUT INSERTED.MarcaId VALUES (@MarcaDetails)";
+            var parametros = new Dictionary<string, object> { { "MarcaDetails", marcaDetails } };
+            return DalPro.Query<int>(sql, parametros).First();
+        }
     }
 }

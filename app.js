@@ -1,155 +1,281 @@
+const api = "https://localhost:44345";
 
+const selectMarca = document.getElementById("fMarca");
+const selectAno = document.getElementById("fAno");
+const selectVendido = document.getElementById("fVendido");
+const tabela = document.getElementById("tabela");
+const formVeiculo = document.getElementById("formVeiculo");
+const editMarca = document.getElementById("editMarca");
+const editModelo = document.getElementById("editModelo");
+const editInspecao = document.getElementById("inspecao");
+const editAno = document.getElementById("ano");
+const editVendido = document.getElementById("vendido");
+let carIndex = document.getElementById("editIndex");
 
-let veiculos = JSON.parse(localStorage.getItem('veiculos')) || [];
+let listaMarcasGlobal = [];
+let listaModelosGlobal = [];
 
+async function Init() {
+    listaMarcasGlobal = await obterMarcas();
+    listaModelosGlobal = await obterModelos();
 
-veiculos = veiculos.map(v => ({
-    ...v,
-    ultimaInspecao: new Date(v.ultimaInspecao)
-}));
+    PreencherCombos(listaMarcasGlobal, "fMarca");
+    PreencherCombos(listaModelosGlobal, "fModelo");
+    PreencherDatalist(listaMarcasGlobal, "listaMarcas", "marcaDetails");
+    PreencherDatalist(listaModelosGlobal, "listaModelos", "modelDetails");
 
+    await PreencherLista();
 
-if (veiculos.length === 0) {
-    veiculos = [...db];
-    localStorage.setItem('veiculos', JSON.stringify(veiculos));
+    formVeiculo.addEventListener("submit", async function (e) {
+        e.preventDefault();
+        await Guardar();
+        await PreencherLista();
+    });
 }
 
-const form = document.getElementById('formVeiculo');
-const tabela = document.getElementById('tabela');
-const fMarca = document.getElementById('fMarca');
-const fAno = document.getElementById('fAno');
-const fVendido = document.getElementById('fVendido');
-
-function setDate(y, m, d) {
-    let tmp = new Date(y, m, d);
-    tmp.setMonth(tmp.getMonth() - 1);
-    return tmp;
+async function PreencherLista() {
+    const veiculos = await obterVeiculos();
+    MostrarTabela(veiculos);
+    PreencherComboAno(veiculos);
 }
 
-function toInputDateLocal(d) {
-    const pad = n => String(n).padStart(2, "0");
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+function MostrarTabela(list) {
+    tabela.innerHTML = "";
+
+    list.forEach((item) => {
+        let newRow = document.createElement("tr");
+        newRow.innerHTML = `
+            <td>${item.marcaDetails}</td>
+            <td>${item.modelDetails}</td>
+            <td>${item.ano}</td>
+            <td>${ShowDate(item.ultimaInspecao)} (${inspecaoEstado(new Date(item.ultimaInspecao))})</td>
+            <td class="${item.vendido ? 'vendido' : ''}">${item.vendido ? 'Vendido' : 'Disponível'}</td>
+        `;
+
+        let actionsCell = document.createElement("td");
+
+        let btnEditar = document.createElement("button");
+        btnEditar.textContent = "Editar";
+        btnEditar.onclick = () => PreencherTxtEditar(item.veiculoId);
+        actionsCell.appendChild(btnEditar);
+
+        let btnDeletar = document.createElement("button");
+        btnDeletar.textContent = "Remover";
+        btnDeletar.onclick = () => DeletarItem(item.veiculoId);
+        actionsCell.appendChild(btnDeletar);
+
+        newRow.appendChild(actionsCell);
+        tabela.appendChild(newRow);
+    });
+}
+
+async function PreencherTxtEditar(id) {
+    const veiculo = await obterVeiculo(id);
+
+    const marca = listaMarcasGlobal.find(m => m.marcaId === veiculo.marcaId);
+    const modelo = listaModelosGlobal.find(m => m.modeloId === veiculo.modeloId);
+
+    editMarca.value = marca ? marca.marcaDetails : "";
+    editModelo.value = modelo ? modelo.modelDetails : "";
+    editAno.value = veiculo.ano;
+    editVendido.checked = veiculo.vendido;
+    editInspecao.value = toInputDateEdit(veiculo.ultimaInspecao);
+    carIndex.value = id;
+    window.scrollTo(0, 0);
+}
+
+function PreencherDatalist(lista, elementId, campoNome) {
+    const dl = document.getElementById(elementId);
+    dl.innerHTML = "";
+    lista.forEach(item => {
+        const option = document.createElement("option");
+        option.value = item[campoNome];
+        dl.appendChild(option);
+    });
+}
+
+function PreencherCombos(lista, elementId) {
+    const p = document.getElementById(elementId);
+
+    if (elementId === "fMarca") {
+        p.innerHTML = '<option value="">Todas as marcas</option>';
+    } else if (elementId === "fModelo") {
+        p.innerHTML = '<option value="">Todos os modelos</option>';
+    } else {
+        p.innerHTML = '<option value="">-- Selecionar --</option>';
+    }
+
+    lista.forEach(item => {
+        const option = document.createElement("option");
+        option.value = item.marcaId || item.modeloId;
+        option.innerText = item.marcaDetails || item.modelDetails;
+        p.appendChild(option);
+    });
+}
+
+function PreencherComboAno(veiculos) {
+    const anos = [...new Set(veiculos.map(v => v.ano))].sort((a, b) => b - a);
+    const p = document.getElementById("fAno");
+    p.innerHTML = '<option value="">Todos os anos</option>';
+    anos.forEach(a => {
+        const option = document.createElement("option");
+        option.value = a;
+        option.innerText = a;
+        p.appendChild(option);
+    });
+}
+
+async function FiltrarLista() {
+    const veiculos = await obterVeiculos();
+    const fM = document.getElementById("fMarca").value;
+    const fA = document.getElementById("fAno").value;
+    const fV = document.getElementById("fVendido").value;
+
+    const filtrados = veiculos.filter(v => {
+        const mMarca = !fM || v.marcaId.toString() === fM;
+        const mAno = !fA || v.ano.toString() === fA;
+        const mVendido = fV === "" || v.vendido.toString() === fV;
+        return mMarca && mAno && mVendido;
+    });
+
+    MostrarTabela(filtrados);
+}
+
+async function resolverMarcaId(texto) {
+    const nome = texto.trim();
+    const existente = listaMarcasGlobal.find(
+        m => m.marcaDetails.toLowerCase() === nome.toLowerCase()
+    );
+    if (existente) return existente.marcaId;
+
+    const res = await fetch(`${api}/marcas?marcaDetails=${encodeURIComponent(nome)}`, {
+        method: 'POST'
+    });
+    if (!res.ok) throw new Error("Erro ao criar marca.");
+    const nova = await res.json();
+    listaMarcasGlobal.push(nova);
+    PreencherDatalist(listaMarcasGlobal, "listaMarcas", "marcaDetails");
+    return nova.marcaId;
+}
+
+async function resolverModeloId(texto) {
+    const nome = texto.trim();
+    const existente = listaModelosGlobal.find(
+        m => m.modelDetails.toLowerCase() === nome.toLowerCase()
+    );
+    if (existente) return existente.modeloId;
+
+    const res = await fetch(`${api}/modelos?modelDetails=${encodeURIComponent(nome)}`, {
+        method: 'POST'
+    });
+    if (!res.ok) throw new Error("Erro ao criar modelo.");
+    const novo = await res.json();
+    listaModelosGlobal.push(novo);
+    PreencherDatalist(listaModelosGlobal, "listaModelos", "modelDetails");
+    return novo.modeloId;
+}
+
+async function Guardar() {
+    const idExistente = carIndex.value;
+
+    let marcaId, modeloId;
+    try {
+        marcaId = await resolverMarcaId(editMarca.value);
+        modeloId = await resolverModeloId(editModelo.value);
+    } catch (err) {
+        alert(err.message);
+        return;
+    }
+
+    const dto = {
+        marcaId: marcaId,
+        modeloId: modeloId,
+        ano: parseInt(editAno.value),
+        vendido: editVendido.checked,
+        ultimaInspecao: editInspecao.value || null,
+        tipoId: 1
+    };
+
+    if (idExistente === "") {
+        await CreateObject(dto);
+    } else {
+        await EditObject(dto, idExistente);
+    }
+
+    LimparEdits();
+}
+
+function LimparEdits() {
+    formVeiculo.reset();
+    document.getElementById("editIndex").value = "";
 }
 
 function inspecaoEstado(data) {
     const agora = new Date();
-    const diffMeses = (agora - data) / (1000 * 60 * 60 * 24 * 30.44); // Aproximação de meses
+    const diffMeses = (agora - data) / (1000 * 60 * 60 * 24 * 30);
     if (diffMeses > 12) return '<span class="vendido">Expirada</span>';
     if (diffMeses > 10) return '<span class="aviso">A expirar</span>';
     return '<span class="ok">Válida</span>';
 }
 
-
-function guardar() {
-    localStorage.setItem('veiculos', JSON.stringify(veiculos));
-    preencherFiltros(); 
-    render();
+function toInputDateEdit(d) {
+    const dataObj = new Date(d);
+    return `${dataObj.getFullYear()}-${String(dataObj.getMonth() + 1).padStart(2, '0')}-${String(dataObj.getDate()).padStart(2, '0')}`;
 }
 
-function eliminar(index) {
-    if (confirm("Tem a certeza que deseja remover este veículo?")) {
-        veiculos.splice(index, 1);
-        guardar();
-    }
+function ShowDate(d) {
+    const dataObj = new Date(d);
+    const pad = n => String(n).padStart(2, "0");
+    return `${pad(dataObj.getDate())}/${pad(dataObj.getMonth() + 1)}/${dataObj.getFullYear()}`;
 }
 
-function editar(i) {
-    const v = veiculos[i];
-    document.getElementById('editIndex').value = i;
-    document.getElementById('marca').value = v.marca;
-    document.getElementById('modelo').value = v.modelo;
-    document.getElementById('ano').value = v.ano;
-    document.getElementById('inspecao').value = toInputDateLocal(v.ultimaInspecao);
-    document.getElementById('vendido').checked = v.vendido;
-    window.scrollTo(0, 0); 
+async function obterVeiculos() {
+    const result = await fetch(api + "/veiculos");
+    return await result.json();
 }
 
-function preencherFiltros() {
-    const marcaAtual = fMarca.value;
-    const anoAtual = fAno.value;
-
-    const marcas = [...new Set(veiculos.map(v => v.marca))].sort();
-    const anos = [...new Set(veiculos.map(v => v.ano))].sort((a, b) => b - a);
-
-    fMarca.innerHTML = '<option value="">Todas as marcas</option>' + 
-        marcas.map(m => `<option value="${m}">${m}</option>`).join('');
-    
-    fAno.innerHTML = '<option value="">Todos os anos</option>' + 
-        anos.map(a => `<option value="${a}">${a}</option>`).join('');
-
-    fMarca.value = marcaAtual;
-    fAno.value = anoAtual;
+async function obterVeiculo(id) {
+    const result = await fetch(api + "/veiculos/" + id);
+    return await result.json();
 }
 
-function render() {
-    tabela.innerHTML = '';
+async function obterMarcas() {
+    const result = await fetch(api + "/marcas");
+    return await result.json();
+}
 
-    const filtrados = veiculos.filter(v => {
-        const mMarca = !fMarca.value || v.marca === fMarca.value;
-        const mAno = !fAno.value || v.ano.toString() === fAno.value;
-        const mVendido = !fVendido.value || v.vendido.toString() === fVendido.value;
-        return mMarca && mAno && mVendido;
+async function obterModelos() {
+    const result = await fetch(api + "/modelos");
+    return await result.json();
+}
+
+async function CreateObject(dto) {
+    const response = await fetch(api + "/veiculos", {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(dto)
     });
-
-    filtrados.forEach((v, i) => {
-      
-        const originalIndex = veiculos.indexOf(v);
-        
-        const row = tabela.insertRow();
-        row.innerHTML = `
-            <td>${v.marca}</td>
-            <td>${v.modelo}</td>
-            <td>${v.ano}</td>
-            <td>${toInputDateLocal(v.ultimaInspecao)} ${inspecaoEstado(v.ultimaInspecao)}</td>
-            <td class="${v.vendido ? 'vendido' : ''}">${v.vendido ? 'Vendido' : 'Disponível'}</td>
-            <td>
-                <button onclick="editar(${originalIndex})">Editar</button>
-                <button onclick="eliminar(${originalIndex})">Remover</button>
-            </td>
-        `;
-    });
+    if (!response.ok) throw new Error("Erro ao criar veículo.");
+    alert("Veículo adicionado com sucesso!");
 }
 
+async function EditObject(dto, id) {
+    const response = await fetch(`${api}/veiculos/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(dto)
+    });
+    if (!response.ok) throw new Error("Erro ao editar veículo.");
+    alert("Veículo editado com sucesso!");
+}
 
-form.addEventListener('submit', (e) => {
-    e.preventDefault();
-    const index = document.getElementById('editIndex').value;
-    
-    const novoVeiculo = {
-        marca: document.getElementById('marca').value,
-        modelo: document.getElementById('modelo').value,
-        ano: parseInt(document.getElementById('ano').value),
-        ultimaInspecao: new Date(document.getElementById('inspecao').value),
-        vendido: document.getElementById('vendido').checked
-    };
-
-    if (index === "") {
-        veiculos.push(novoVeiculo);
-    } else {
-        veiculos[index] = novoVeiculo;
-        document.getElementById('editIndex').value = "";
-    }
-
-    guardar();
-    form.reset();
-});
-
-
-document.getElementById('carregarLS').onclick = () => {
-  
-    veiculos = [...db]; 
-    guardar();
-};
-
-document.getElementById('limparLS').onclick = () => {
-    if(confirm("Limpar todos os dados?")) {
-        veiculos = [];
-        guardar();
-    }
-};
-
-[fMarca, fAno, fVendido].forEach(f => f.addEventListener('change', render));
-
-
-preencherFiltros();
-render();
+async function DeletarItem(id) {
+    if (!confirm("Tem a certeza que deseja remover este veículo?")) return;
+    const response = await fetch(`${api}/veiculos/${id}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' }
+    });
+    if (!response.ok) throw new Error("Erro ao remover veículo.");
+    await PreencherLista();
+    alert("Veículo removido com sucesso!");
+}

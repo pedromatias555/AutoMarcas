@@ -6,54 +6,57 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestão de Veículos - Stand Auto</title>
     <link rel="stylesheet" href="styles.css">
-    
 </head>
 
 <body>
-    
-    
+
     <div id="topo">
         <h1>Gestão de Veículos</h1>
-
-        <button id="carregarLS">(Re)Inicializar BD</button>
-        <button id="limparLS">Limpar BD</button>
-
-        <hr>
 
         <h2>Adicionar / Editar Veículo</h2>
         <form id="formVeiculo">
             <input type="hidden" id="editIndex" value="" />
-            
-            <input type="text" id="marca" placeholder="Marca" required />
-            <input type="text" id="modelo" placeholder="Modelo" required />
-            <input type="number" id="ano" placeholder="Ano" required />
+
+            <input type="text" id="editMarca" placeholder="Marca" required list="listaMarcas" autocomplete="off" />
+            <datalist id="listaMarcas"></datalist>
+
+            <input type="text" id="editModelo" placeholder="Modelo" required list="listaModelos" autocomplete="off" />
+            <datalist id="listaModelos"></datalist>
+
+            <input type="number" id="ano" placeholder="Ano" required min="1900" max="2100" />
+
             <input type="date" id="inspecao" required />
-            
+
             <label>
                 <input type="checkbox" id="vendido" /> Vendido
             </label>
-            
+
             <button type="submit" id="btnGuardar">Guardar Veículo</button>
+            <button type="button" onclick="LimparEdits()">Limpar</button>
         </form>
 
         <hr>
 
-        <h2>Filtros de Pesquisa</h2>
-        <div class="filtros-container">
-            <select id="fMarca">
-                <option value="">Todas as marcas</option>
-            </select>
-            
-            <select id="fAno">
-                <option value="">Todos os anos</option>
-            </select>
-            
-            <select id="fVendido">
-                <option value="">Todos os estados</option>
-                <option value="false">Disponíveis</option>
-                <option value="true">Vendidos</option>
-            </select>
-        </div>
+     <h2>Filtros de Pesquisa</h2>
+<div class="filtros-container">
+    <select id="fMarca" onchange="FiltrarLista()">
+        <option value="">Todas as marcas</option>
+    </select>
+
+    <select id="fModelo" onchange="FiltrarLista()">
+        <option value="">Todos os modelos</option>
+    </select>
+
+    <select id="fAno" onchange="FiltrarLista()">
+        <option value="">Todos os anos</option>
+    </select>
+
+    <select id="fVendido" onchange="FiltrarLista()">
+        <option value="">Todos os estados</option>
+        <option value="false">Disponíveis</option>
+        <option value="true">Vendidos</option>
+    </select>
+</div>
     </div>
 
     <table>
@@ -67,11 +70,13 @@
                 <th>Ações</th>
             </tr>
         </thead>
-        <tbody id="tabela">
-            </tbody>
+        <tbody id="tabela"></tbody>
     </table>
-     <script src="db.js"></script>
-<script src="app.js"></script>
+
+    <script src="app.js"></script>
+    <script>
+        Init();
+    </script>
 </body>
 
 </html>

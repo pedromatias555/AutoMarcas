@@ -1,0 +1,6 @@
+@AutoMarcas.API_HostAddress = http://localhost:5046
+
+GET {{AutoMarcas.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

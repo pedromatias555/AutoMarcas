@@ -7,11 +7,10 @@ using DalProLib;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Swagger
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// CORS
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("cors", policy =>
@@ -22,7 +21,6 @@ builder.Services.AddCors(options =>
     });
 });
 
-// Injeção de Dependências
 builder.Services.AddScoped<IMarcaRepository, MarcaRepository>();
 builder.Services.AddScoped<IModeloRepository, ModeloRepository>();
 builder.Services.AddScoped<IVeiculoRepository, VeiculoRepository>();
@@ -32,26 +30,26 @@ builder.Services.AddScoped<IVeiculoService, VeiculoService>();
 
 var app = builder.Build();
 
-// Connection string da DalPro
+
 DalPro.ConnectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 
 app.UseCors("cors");
 app.UseSwagger();
 app.UseSwaggerUI();
 
-// Endpoints Marca
+
 app.MapGet("/marcas", (IMarcaService service) =>
 {
     return service.GetAll();
 });
 
-// Endpoints Modelo
+
 app.MapGet("/modelos", (IModeloService service) =>
 {
     return service.GetAll();
 });
 
-// Endpoints Veiculo
+
 app.MapGet("/veiculos", (IVeiculoService service) =>
 {
     return service.GetAll();
